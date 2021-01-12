@@ -1,9 +1,11 @@
-project('pcg-test',
-        'cpp',
-        version : '0.0.0',
-        default_options: [
-          'cpp_std=c++2a'
-        ])
+project(
+  'pcg-test',
+  'cpp',
+  version : '0.0.0',
+  default_options: [
+    'cpp_std=c++2a'
+  ],
+)
 
 lsfml_window = dependency('sfml-window')
 lsfml_system = dependency('sfml-system')
@@ -13,4 +15,8 @@ deps = [lsfml_window, lsfml_system, lsfml_graphics]
 sources = []
 subdir('src')
 
-executable('pcg-test', sources, dependencies:deps)
+executable(
+  meson.project_name(),
+  sources: sources,
+  dependencies: deps,
+)

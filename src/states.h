@@ -8,10 +8,10 @@
 
 class State {
 public:
-	State();
-	State(const State& other);
-	State& operator=(const State& other);
-	virtual ~State();
+	State() = default;
+	State(const State& other) = default;
+	State& operator=(const State& other) = default;
+	virtual ~State() = default;
 
 	virtual void update(sf::RenderWindow&) = 0;
 	virtual void draw(sf::RenderWindow&) = 0;

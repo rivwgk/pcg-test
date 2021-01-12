@@ -10,9 +10,9 @@ extern sf::Color
 temperature(double value, double min, double max);
 
 struct HSVColor {
-   float h; // \in [0,360[
-   float s; // \in [0,100]
-   float v; // \in [0,100]
+	float h; // \in [0,360[
+	float s; // \in [0,100]
+	float v; // \in [0,100]
 };
 
 extern sf::Color

@@ -1,3 +1,5 @@
+#pragma once
+
 #include <algorithm>
 #include <cmath>
 #include <type_traits>
@@ -55,7 +57,7 @@ struct Vector {
 	const {
 		Vector<T,N> d;
 		for (size_t i=0; i<N; ++i)
-			d[i]=data[i]+other[i];
+			d[i] = data[i]+other[i];
 		return d;
 	}
 	/* -------------------------------------------------------------- */
@@ -63,7 +65,7 @@ struct Vector {
 	operator+=(const Vector<T,N>& other)
 	{
 		for (size_t i=0; i<N; ++i)
-			data[i]+=other[i];
+			data[i] += other[i];
 		return *this;
 	}
 	/* ============================================================== */
@@ -72,7 +74,7 @@ struct Vector {
 	const {
 		Vector<T,N> d;
 		for (size_t i=0; i<N; ++i)
-			d[i]=-data[i];
+			d[i] = -data[i];
 		return d;
 	}
 	/* -------------------------------------------------------------- */
@@ -81,7 +83,7 @@ struct Vector {
 	const {
 		Vector<T,N> d;
 		for (size_t i=0; i<N; ++i)
-			d[i]=data[i]-other[i];
+			d[i] = data[i]-other[i];
 		return d;
 	}
 	/* -------------------------------------------------------------- */
@@ -89,7 +91,7 @@ struct Vector {
 	operator-=(const Vector<T,N>& other)
 	{
 		for (size_t i=0; i<N; ++i)
-			data[i]-=other[i];
+			data[i] -= other[i];
 		return *this;
 	}
 	/* ============================================================== */
@@ -98,7 +100,7 @@ struct Vector {
 	const {
 		Vector<T,N> d;
 		for (size_t i=0; i<N; ++i)
-			d[i]=data[i]*other[i];
+			d[i] = data[i]*other[i];
 		return d;
 	}
 	/* -------------------------------------------------------------- */
@@ -106,7 +108,7 @@ struct Vector {
 	operator*=(const Vector<T,N>& other)
 	{
 		for (size_t i=0; i<N; ++i)
-			data[i]*=other[i];
+			data[i] *= other[i];
 		return *this;
 	}
 	/* ============================================================== */
@@ -115,7 +117,7 @@ struct Vector {
 	const {
 		Vector<T,N> d;
 		for (size_t i=0; i<N; ++i)
-			d[i]=data[i]/other[i];
+			d[i] = data[i]/other[i];
 		return d;
 	}
 	/* -------------------------------------------------------------- */
@@ -123,7 +125,7 @@ struct Vector {
 	operator/=(const Vector<T,N>& other)
 	{
 		for (size_t i=0; i<N; ++i)
-			data[i]/=other[i];
+			data[i] /= other[i];
 		return *this;
 	}
 private:
@@ -135,7 +137,7 @@ dot(const Vector<T,N>& lhs, const Vector<T,N>& rhs)
 {
 	T d{};
 	for (size_t i=0; i<N; ++i)
-		d+=lhs[i]*rhs[i];
+		d += lhs[i]*rhs[i];
 	return d;
 }
 template<typename T, size_t N> T
@@ -143,7 +145,7 @@ dot(const T lhs[N], const T rhs[N])
 {
 	T d{};
 	for (size_t i=0; i<N; ++i)
-		d+=lhs[i]*rhs[i];
+		d += lhs[i]*rhs[i];
 	return d;
 }
 /* ----------------------------------------------------------------- */

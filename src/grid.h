@@ -21,7 +21,7 @@ private:
 	Tile* m_tiles;
 };
 
-Grid diamond_square(int exp, int xcells, int ycells, float wiggle);
+Grid diamond_square(int exp, int xcells, int ycells, double wiggle);
 Grid value_noise(int cellsize, int xcells ,int ycells, int n_oct=1,
                  const std::function<double(double)>&f=math::identity<double>);
 Grid gradient_noise(int cellsize, int xcells, int ycells, int n_oct=1);
