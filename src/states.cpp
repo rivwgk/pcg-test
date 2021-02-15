@@ -116,9 +116,8 @@ StateManager::update(sf::RenderWindow& window)
 				}
 			} break;
 		case sf::Event::MouseWheelScrolled:
-			if (has_focus) {
+			if (has_focus)
 				states.back()-> scrolled(ev.mouseWheelScroll);
-			}
 			break;
 		default:
 			break;

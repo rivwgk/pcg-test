@@ -106,26 +106,27 @@ diamond_square(int exp,int xcells,int ycells,double wiggle)
 	};
 	// set each of the nodes' value on the initial coarse grid
 	for (int y=0; y<=ycells; ++y)
-		for (int x=0; x<=xcells; ++x) {
-			grid(x*size,y*size).height = rand();
-			grid(x*size,y*size).temperature = rand();
-			grid(x*size,y*size).moisture = rand();
-		}
+		for (int x=0; x<=xcells; ++x)
+			for (int h=0; h<3; ++h)
+				grid(x*size,y*size).values[h] = rand();
 	// refine the grid
 	for (int cellsize=size; cellsize>1; ) {
 		// diamond step
 		for (int y=0; y<ycells; ++y)
 			for (int x=0; x<xcells; ++x)
-				diamond(x, y, cellsize, wiggle, 0);
+				for (int h=0; h<3; ++h)
+					diamond(x, y, cellsize, wiggle, h);
 		cellsize /= 2; ycells *= 2; xcells *= 2; wiggle *= damping;
 		// square step
 		for (int y=0; y<ycells; ++y) {
-			if (y%2 == 0)
-				for (int x=1; x<xcells; x+=2)
-					square(x, y, cellsize, wiggle, 0);
-			else
-				for (int x=0; x<xcells; x+=2)
-					square(x, y, cellsize, wiggle, 0);
+			for (int h=0; h<3; ++h) {
+				if (y%2 == 0)
+					for (int x=1; x<xcells; x+=2)
+						square(x, y, cellsize, wiggle, h);
+				else
+					for (int x=0; x<xcells; x+=2)
+						square(x, y, cellsize, wiggle, h);
+			}
 		}
 		wiggle *= damping;
 	}
@@ -136,7 +137,7 @@ diamond_square(int exp,int xcells,int ycells,double wiggle)
  * \par cellsize the width and height of each cell
  * \par xcells how many cells on the x-axis
  * \par ycells how many cells on the y-axis
- * \par n_oct how many octaves of value noise should be used,
+ * \par n_oct how many octaves of noise should be used,
  *            default is $1$
  * \par f the interpolation function, default is $id$
  */
@@ -153,7 +154,7 @@ value_noise(int cellsize, int xcells, int ycells, int n_oct/*=1*/,
 		const int csize = (cellsize>>k);
 		for (int y=0; y < (ycells*(1<<k)); ++y)
 			for (int x=0; x < (xcells*(1<<k)); ++x)
-				grid(x*csize,y*csize).grad[0] = rand();
+				grid(x*csize,y*csize).values[0] = rand();
 
 		for (int y=0; y < ycells*cellsize; ++y)
 			for (int x=0; x < xcells*cellsize; ++x) {
@@ -162,11 +163,11 @@ value_noise(int cellsize, int xcells, int ycells, int n_oct/*=1*/,
 				int u = x % csize;
 				int v = y % csize;
 				grid(x,y).values[0] += math::interpolate2d(
-				         grid(xc*csize, yc*csize).grad[0],
-				         grid(xc*csize, (yc+1)*csize).grad[0],
-				         grid((xc+1)*csize, yc*csize).grad[0],
-				         grid((xc+1)*csize, (yc+1)*csize).grad[0],
-				         u,v,csize,f) / (1<<k);
+												grid(xc*csize, yc*csize).grad[0],
+												grid(xc*csize, (yc+1)*csize).grad[0],
+												grid((xc+1)*csize, yc*csize).grad[0],
+												grid((xc+1)*csize, (yc+1)*csize).grad[0],
+												u,v,csize,f) / (1<<k);
 			}
 	}
 	return grid;
@@ -213,31 +214,15 @@ gradient_noise(int cellsize, int xcells, int ycells, int n_oct/*=1*/)
 				uv01[0]=1.0*u/csize  , uv01[1]=1.0*v/csize-1;
 				uv10[0]=1.0*u/csize-1, uv10[1]=1.0*v/csize;
 				uv11[0]=1.0*u/csize-1, uv11[1]=1.0*v/csize-1;
-				grid(x,y).height += math::interpolate2d(
-				         math::dot<double,2>(grid(xc*csize,yc*csize).grad,uv00),
-				         math::dot<double,2>(grid(xc*csize,(yc+1)*csize).grad,uv01),
-				         math::dot<double,2>(grid((xc+1)*csize,yc*csize).grad,uv10),
-				         math::dot<double,2>(grid((xc+1)*csize,(yc+1)*csize).grad,uv11),
-				          u, v, csize, [](double t)-> double {return t*t*(-2*t+3);})
-				          / (sqrt(2.0)*(1<<k));
+				grid(x,y).values[0] += math::interpolate2d(
+							math::dot<double,2>(grid(xc*csize,yc*csize).grad,uv00),
+							math::dot<double,2>(grid(xc*csize,(yc+1)*csize).grad,uv01),
+							math::dot<double,2>(grid((xc+1)*csize,yc*csize).grad,uv10),
+							math::dot<double,2>(grid((xc+1)*csize,(yc+1)*csize).grad,uv11),
+							 u, v, csize, [](double t)-> double {return t*t*(-2*t+3);})
+							 / (sqrt(2.0)*(1<<k));
 			}
 	}
-	return grid;
-}
-/* ================================================================= *\
- * wavelet noise, for a detailed description see:
- * Cook, R., DeRose, T.: Wavelet Noise. ACM Trans. Graph., 24:803-811
- * 07 2005.
- * TODO
- */
-Grid
-wavelet_noise(int cellsize, int xcells, int ycells, int n_oct/*=1*/)
-{
-	assert(n_oct < std::log2(cellsize));
-	std::mt19937 gen{std::random_device{}()};
-	Grid grid{xcells*cellsize,ycells*cellsize};
-	auto rand = [&](){ return -1+2*std::generate_canonical<double,16>(gen); };
-
 	return grid;
 }
 /* ================================================================= *\
@@ -253,9 +238,56 @@ doran_parberry(int width,int height)
 	return Grid{width,height};
 }
 /* ================================================================= *\
- * TODO
+ * evaluates the biome type of each tile of a grid
  */
 void
 classify_grid(Grid& grid)
 {
+	for (int y=0; y<grid.height(); ++y) {
+		for (int x=0; x<grid.width(); ++x) {
+			Tile& t = grid(x, y);
+			if (t.height < 0.1)
+				t.type = BiomeType::Deep_Ocean;
+			else if (t.height < 0.3)
+				t.type = BiomeType::Ocean;
+			else if (t.height < 0.4) {
+				t.type = BiomeType::Shallow_Ocean;
+			} else if (t.height < 0.95) {
+				if (t.moisture <= 0.1) {
+					if (t.temperature < .12)
+						t.type = BiomeType::Nival_Desert;
+					else if (t.temperature <= 0.8)
+						t.type = BiomeType::Temperate_Desert;
+					else
+						t.type = BiomeType::Tropical_Desert;
+				} else if (t.moisture <= 0.4) {
+					if (t.temperature < .12)
+						t.type = BiomeType::Nival_Shrubland;
+					else if (t.temperature <= 0.8)
+						t.type = BiomeType::Temperate_Shrubland;
+					else
+						t.type = BiomeType::Tropical_Shrubland;
+				} else if (t.moisture <= 0.7) {
+					if (t.temperature < .12)
+						t.type = BiomeType::Nival_Shrubland;
+					else if (t.temperature <= 0.8)
+						t.type = BiomeType::Temperate_Forest;
+					else
+						t.type = BiomeType::Tropical_Forest;
+				} else {
+					if (t.temperature < .12)
+						t.type = BiomeType::Nival_Forest;
+					else if (t.temperature <= 0.8)
+						t.type = BiomeType::Temperate_Swamp;
+					else
+						t.type = BiomeType::Tropical_Swamp;
+				}
+			} else {
+				if (t.moisture >= 0.8)
+					t.type = BiomeType::Glacier;
+				else
+					t.type = BiomeType::Mountain;
+			}
+		}
+	}
 }

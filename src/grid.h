@@ -25,4 +25,4 @@ Grid diamond_square(int exp, int xcells, int ycells, double wiggle);
 Grid value_noise(int cellsize, int xcells ,int ycells, int n_oct=1,
                  const std::function<double(double)>&f=math::identity<double>);
 Grid gradient_noise(int cellsize, int xcells, int ycells, int n_oct=1);
-Grid wavelet_noise(int cellsize, int xcells, int ycells, int n_oct=1);
+void classify_grid(Grid& grid);

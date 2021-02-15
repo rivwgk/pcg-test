@@ -182,25 +182,3 @@ normalize(Vector<T,N>& v)
       v[i] /= n;
 }
 } // namespace math
-/* ================================================================= */
-namespace std {
-
-template<typename T,int N> T
-max(const math::Vector<T,N>& v)
-{
-	T p = v[0];
-	for (int i=1; i<N; ++i)
-		p = max(p,v[i]);
-	return p;
-}
-/* -------------------------------------------------------------- */
-template<typename T,int N> T
-min(const math::Vector<T,N>& v)
-{
-	T p = v[0];
-	for (int i=1; i<N; ++i)
-		p = min(p,v[i]);
-	return p;
-}
-
-} // namespace std

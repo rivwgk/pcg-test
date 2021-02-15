@@ -53,9 +53,7 @@ void
 MapDisplay::set_grid(Grid* grid)
 {
 	this-> grid = grid;
-	load_dataset(0);
-	shader.setUniform("width", grid-> width());
-	shader.setUniform("height", grid-> height());
+	load_dataset(-1);
 }
 /* ----------------------------------------------------------------- */
 void
@@ -106,30 +104,39 @@ MapDisplay::update(sf::RenderWindow& w)
 	else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right))
 		x_offset += 1;
 
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F1))
-		printf("height\n"), load_dataset(0);
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F2))
-		printf("temperature\n"), load_dataset(1);
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F4))
-		printf("humidity\n"), load_dataset(2);
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Q))
-		coloured = !coloured, shader.setUniform("coloured", coloured);
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F1)) {
+		printf("height\n"); coloured = false; load_dataset(0);
+	}
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F2)) {
+		printf("temperature\n"); coloured = false; load_dataset(1);
+	}
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F3)) {
+		printf("humidity\n"); coloured = false; load_dataset(2);
+	}
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F4)) {
+		coloured = true; load_dataset(-1);
+	}
+	shader.setUniform("coloured", coloured);
 }
 /* ----------------------------------------------------------------- */
 void
 MapDisplay::load_dataset(int i)
 {
 	img.create(grid-> width(), grid-> height());
-	for (int y=0; y<grid-> height(); ++y)
-		for (int x=0; x<grid-> width(); ++x) {
-			sf::Uint8 h = 255u*std::clamp((*grid)(x,y).height, 0.0, 1.0);
-			sf::Uint8 t = 255u*std::clamp((*grid)(x,y).temperature, 0.0, 1.0);
-			sf::Uint8 m = 255u*std::clamp((*grid)(x,y).moisture, 0.0, 1.0);
-			img.setPixel(x,y,sf::Color{h,t,m});
-		}
+	if (i == -1)
+		for (int y=0; y<grid-> height(); ++y)
+			for (int x=0; x<grid-> width(); ++x) {
+				sf::Color c{Tile::BiomeColours[static_cast<char>((*grid)(x,y).type)]};
+				img.setPixel(x, y, c);
+			}
+	else
+		for (int y=0; y<grid-> height(); ++y)
+			for (int x=0; x<grid-> width(); ++x) {
+				double v = std::clamp((*grid)(x,y).values[i], 0.0, 1.0);
+				img.setPixel(x, y, sf::Color{255*v,0,0});
+			}
 	tex.create(grid-> width(), grid-> height());
 	tex.update(img);
-	tex.setRepeated(true);
 }
 /* ----------------------------------------------------------------- */
 size_t

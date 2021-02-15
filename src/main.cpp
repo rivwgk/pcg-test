@@ -17,12 +17,13 @@ main(int argc, char **argv)
 	const int ld_cellsize = 4;
 	const int xcells = 15;
 	const int ycells = 10;
-	Grid gd = diamond_square(ld_cellsize,xcells,ycells,0.8);
+	Grid gd = diamond_square(ld_cellsize,xcells,ycells,0.6);
 	Grid gl = value_noise(1<<ld_cellsize,xcells,ycells,1);
 	Grid gc = value_noise(1<<ld_cellsize,xcells,ycells,1,
-	                      [](double t)->double{return t*t*(-2*t+3);});
+							  [](double t)->double{return t*t*(-2*t+3);});
 	Grid gg = gradient_noise(1<<ld_cellsize,xcells,ycells,3);
-	sman.push(new Grid2DState{&gd});
+	classify_grid(gd);
+	sman.push(new Grid2DState{&gg});
 
 	while (window.isOpen()) {
 		sman.update(window);

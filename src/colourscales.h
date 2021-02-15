@@ -9,11 +9,20 @@ rainbow(double value, double min, double max);
 extern sf::Color
 temperature(double value, double min, double max);
 
-struct HSVColor {
+struct HSVColour {
 	float h; // \in [0,360[
 	float s; // \in [0,100]
 	float v; // \in [0,100]
 };
 
+// workaround for sf::Color not yet supporting constexpr
+struct Colour {
+	const unsigned r;
+	const unsigned g;
+	const unsigned b;
+
+	operator sf::Color() const;
+};
+
 extern sf::Color
-HSVtoRGB(const HSVColor& hsv);
+HSVtoRGB(const HSVColour& hsv);
