@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "grid.h"
-#include "mapdisplay.h"
+#include "matrixdisplay.h"
 
 class State {
 public:
@@ -13,7 +13,7 @@ public:
 	State& operator=(const State& other) = default;
 	virtual ~State() = default;
 
-	virtual void update(sf::RenderWindow&) = 0;
+	virtual void update(sf::RenderWindow&, const sf::Event&) = 0;
 	virtual void draw(sf::RenderWindow&) = 0;
 	virtual void resized(unsigned,unsigned) = 0;
 	virtual void scrolled(const sf::Event::MouseWheelScrollEvent&) = 0;
@@ -28,13 +28,13 @@ public:
 	Grid2DState& operator=(const Grid2DState& other);
 	~Grid2DState();
 
-	void update(sf::RenderWindow&) override;
+	void update(sf::RenderWindow&, const sf::Event&) override;
 	void draw(sf::RenderWindow&) override;
 	void resized(unsigned,unsigned) override;
 	void scrolled(const sf::Event::MouseWheelScrollEvent&) override;
 private:
 	Grid* grid;
-	MapDisplay md{};
+	MatrixDisplay md{};
 };
 
 class StateManager {

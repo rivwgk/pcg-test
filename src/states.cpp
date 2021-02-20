@@ -1,11 +1,14 @@
 #include "states.h"
 
-Grid2DState::Grid2DState(Grid* const g) : grid(g)
+Grid2DState::Grid2DState(Grid* const g)
+ : grid(g)
 {
 	md.set_size(640, 480);
-	md.set_grid(grid);
+	md.load_matrix<BiomeType>(grid-> types(), [](const BiomeType& t)
+	      { return sf::Color(BiomeColours[static_cast<unsigned>(t)]); });
 }
-Grid2DState::Grid2DState(const Grid2DState& other) : grid(other.grid)
+Grid2DState::Grid2DState(const Grid2DState& other)
+ : grid(other.grid)
 {
 	md = other.md;
 }
@@ -21,9 +24,37 @@ Grid2DState::operator=(const Grid2DState& other)
 Grid2DState::~Grid2DState() {}
 /* ----------------------------------------------------------------- */
 void
-Grid2DState::update(sf::RenderWindow& window)
+Grid2DState::update(sf::RenderWindow& window, const sf::Event& e)
 {
-	md.update(window);
+	double min, max;
+	if (e.type == sf::Event::KeyPressed) {
+		switch (e.key.code) {
+		case sf::Keyboard::Key::F1:
+			min = math::min(grid-> heightmap());
+			max = math::max(grid-> heightmap());
+			md.load_matrix<double>(grid-> heightmap(),
+			               [=](double x){ return greyscale(x, min, max); });
+			break;
+		case sf::Keyboard::Key::F2:
+			min = math::min(grid-> temperature());
+			max = math::max(grid-> temperature());
+			md.load_matrix<double>(grid-> temperature(),
+			               [=](double x){ return temperature(x, min, max); });
+			break;
+		case sf::Keyboard::Key::F3:
+			min = math::min(grid-> humidity());
+			max = math::max(grid-> humidity());
+			md.load_matrix<double>(grid-> humidity(),
+			               [=](double x){ return greyscale(x, min, max); });
+			break;
+		case sf::Keyboard::Key::F4:
+			md.load_matrix<BiomeType>(grid-> types(), [](const BiomeType& t)
+			      { return sf::Color(BiomeColours[static_cast<unsigned>(t)]); });
+			break;
+		default: break;
+		}
+	}
+	md.update();
 }
 /* ----------------------------------------------------------------- */
 void
@@ -60,13 +91,13 @@ StateManager::operator=(const StateManager& other)
 	states = other.states;
 	return *this;
 }
-/* ----------------------------------------------------------------- */
+
 void
 StateManager::push(State* state)
 {
 	states.push_back(state);
 }
-/* ----------------------------------------------------------------- */
+
 State*
 StateManager::pop()
 {
@@ -74,13 +105,13 @@ StateManager::pop()
 	states.pop_back();
 	return s;
 }
-/* ----------------------------------------------------------------- */
+
 const State&
 StateManager::top()
 const {
 	return *states.back();
 }
-/* ----------------------------------------------------------------- */
+
 void
 StateManager::update(sf::RenderWindow& window)
 {
@@ -95,7 +126,7 @@ StateManager::update(sf::RenderWindow& window)
 			                            static_cast<float>(ev.size.width),
 			                            static_cast<float>(ev.size.height)}});
 			for (State* s : states)
-				s-> resized(ev.size.width,ev.size.height);
+				s-> resized(ev.size.width, ev.size.height);
 			break;
 		case sf::Event::LostFocus:
 			has_focus = false;
@@ -109,8 +140,6 @@ StateManager::update(sf::RenderWindow& window)
 				case sf::Keyboard::Key::Escape:
 					window.close();
 					break;
-				case sf::Keyboard::Key::F3:
-					break;
 				default:
 					break;
 				}
@@ -122,11 +151,11 @@ StateManager::update(sf::RenderWindow& window)
 		default:
 			break;
 		}
+		if (has_focus)
+			states.back()-> update(window, ev);
 	}
-	if (has_focus)
-		states.back()-> update(window);
 }
-/* ----------------------------------------------------------------- */
+
 void
 StateManager::draw(sf::RenderWindow& window)
 const {

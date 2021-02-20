@@ -5,33 +5,40 @@
 
 namespace math {
 
-template<typename T>
-T
-identity(const T x)
+template<typename K>
+K
+identity(const K x)
 {
 	return x;
 }
 
-template<typename T>
-T
-interpolate(T x0, T x1, double t, double size=1.0,
+template<typename K>
+K
+cubic_interpolant(const K x)
+{
+	return x*x*(-2*x+3);
+}
+
+template<typename K>
+K
+interpolate(K x0, K x1, double t, double size=1.0,
             const std::function<double(double)>&f=identity<double>)
-{  static_assert(std::is_arithmetic<T>());
+{  static_assert(std::is_arithmetic<K>());
 	return (1-f(t/size))*x0+f(t/size)*x1;
 }
 
-template<typename T>
-T
-interpolate2d(T x00, T x01, T x10, T x11, double u, double v, double size=1.0,
+template<typename K>
+K
+interpolate2d(K x00, K x01, K x10, K x11, double u, double v, double size=1.0,
               const std::function<double(double)>&f=identity<double>)
-{  static_assert(std::is_arithmetic<T>());
+{  static_assert(std::is_arithmetic<K>());
 	return (1-f(u/size))*(1-f(v/size))*x00+(1-f(u/size))*   f(v/size) *x01
 			+   f(u/size) *(1-f(v/size))*x10+   f(u/size) *   f(v/size) *x11;
 }
 
-template<typename T>
-T
-interpolate3d(T x000, T x001, T x010, T x011, T x100, T x101, T x110, T x111,
+template<typename K>
+K
+interpolate3d(K x000, K x001, K x010, K x011, K x100, K x101, K x110, K x111,
               double u, double v, double w, double size=1.0,
               const std::function<double(double)>&f=identity<double>)
 {

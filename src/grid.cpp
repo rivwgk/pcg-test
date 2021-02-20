@@ -2,137 +2,142 @@
  */
 #include "grid.h"
 #include "tile.h"
+#include "math/matrix.hpp"
 #include "math/vector.hpp"
 #include "math/interpolation.hpp"
+#include "math/utilities.hpp"
 
 #include <algorithm>
 #include <random>
 #include <cassert>
-#include <climits>
 #include <cmath>
 #include <cstdlib>
 
-Grid::Grid(int width, int height, bool zeroed/*=false*/) : m_width{width},
-                                                           m_height{height}
+Grid::Grid(size_t height, size_t width, math::Matrix<double> heightmap,
+           math::Matrix<double> temperature, math::Matrix<double> humidity)
+ : m_height{height}, m_width{width}, m_heightmap{heightmap},
+   m_temperature{temperature}, m_humidity{humidity}, m_type{height,width}
 {
-	m_tiles = new Tile[m_height*m_width];
-	if (zeroed)
-		for (int y=0; y<m_height; ++y)
-			for (int x=0; x<m_width; ++x) {
-				(*this)(x,y).height = 0.0;
-				(*this)(x,y).temperature = 0.0;
-				(*this)(x,y).moisture = 0.0;
-			}
+	classify();
 }
-Grid::Grid(const Grid& other) : m_width{other.m_width},
-                                m_height{other.m_height}
+Grid::Grid(const Grid& other)
+ : m_height{other.m_height}, m_width{other.m_width},
+	m_heightmap{other.m_heightmap}, m_temperature{other.m_temperature},
+	m_humidity{other.m_humidity}, m_type{other.m_type}
 {
-	m_tiles = new Tile[other.m_height*other.m_width];
-	for (int y=0; y<other.m_height; ++y)
-		for (int x=0; x<other.m_width; ++x)
-			(*this)(x,y) = other(x,y);
 }
-Grid::~Grid()
+Grid&
+Grid::operator=(const Grid& other)
 {
-	delete[] m_tiles;
+	if (&other == this)
+		return *this;
+	m_height = other.m_height;
+	m_width = other.m_width;
+	m_heightmap = other.m_heightmap;
+	m_temperature = other.m_temperature;
+	m_humidity = other.m_humidity;
+	m_type = other.m_type;
+	return *this;
 }
-/* ----------------------------------------------------------------- */
-Tile&
-Grid::operator()(const int x,const int y)
-{
-	return m_tiles[field_index(x,y)];
-}
-/* ----------------------------------------------------------------- */
-const Tile&
-Grid::operator()(const int x,const int y)
-const {
-	return m_tiles[field_index(x,y)];
-}
-/* ----------------------------------------------------------------- */
-int
+
+size_t
 Grid::height()
-const { return m_height; }
-/* ----------------------------------------------------------------- */
-int
+const {
+	return m_height;
+}
+
+size_t
 Grid::width()
-const { return m_width; }
-/* ----------------------------------------------------------------- */
-bool
-Grid::inside(const int x,const int y)
 const {
-	return 0<=y and y<m_height and 0<=x and x<m_width;
+	return m_width;
 }
-/* ----------------------------------------------------------------- */
-const int
-Grid::field_index(const int x,const int y)
+
+const math::Matrix<double>&
+Grid::heightmap()
 const {
-	if (y < 0) return field_index(x,m_height+y);
-	if (y >= m_height) return field_index(x,y-m_height);
-	if (x < 0) return field_index(m_width+x,y);
-	if (x >= m_width) return field_index(x-m_width,y);
-	return y*m_width+x;
+	return m_heightmap;
 }
-/* ================================================================= *\
+
+const math::Matrix<double>&
+Grid::temperature()
+const {
+	return m_temperature;
+}
+
+const math::Matrix<double>&
+Grid::humidity()
+const {
+	return m_humidity;
+}
+
+const math::Matrix<BiomeType>&
+Grid::types()
+const {
+	return m_type;
+}
+
+/* =================================================================
  * classic diamond square algorithm
  * TODO: documentation
  */
-Grid
-diamond_square(int exp,int xcells,int ycells,double wiggle)
+math::Matrix<double>
+diamond_square(size_t exp, size_t xcells, size_t ycells, double wiggle)
 {
-	const int size = 1<<exp;
-	const int width = size * xcells;
-	const int height = size * ycells;
-	const float damping = 0.75;
+	const size_t size = 1<<exp;
+	const size_t width = size * xcells;
+	const size_t height = size * ycells;
+	const double damping = 0.70;
 	std::mt19937 gen{std::random_device{}()};
-	Grid grid{width, height};
-	auto rand = [&](){ return std::generate_canonical<float,16>(gen); };
-	auto diamond = [&](int x, int y, int s, float w, int i)-> void
+	math::Matrix<double> m{height, width};
+	auto rand = [&](){ return std::generate_canonical<double,28>(gen); };
+	auto diamond = [&](long x, long y, size_t s, double w)-> void
 	{
-		grid(x*s+s/2,y*s+s/2).values[i] = std::clamp<double>(
-		                            (grid(x*s,y*s).values[i] +
-		                             grid(x*s,(y+1)*s).values[i] +
-		                             grid((x+1)*s,y*s).values[i] +
-		                             grid((x+1)*s,(y+1)*s).values[i])/4 +
-		                             2*rand()*w-w, 0.0, 1.0);
+		const size_t xc = (x*s) % m.cols();
+		const size_t yc = (y*s) % m.rows();
+		const size_t xnc = ((x+1)*s) % m.cols();
+		const size_t ync = ((y+1)*s) % m.rows();
+		m(y*s+s/2,x*s+s/2) = std::clamp<double>((m(yc,xc) + m(ync,xc) + m(yc,xnc) + m(ync,xnc))/4
+		                                       + 2*rand()*w-w, 0.0, 1.0);
 	};
-	auto square = [&](int x, int y, int s, float w, int i)-> void
+	auto square = [&](long x, long y, size_t s, double w)-> void
 	{
-		grid(x*s,y*s).values[i] = std::clamp<float>(
-		                             (grid((x-1)*s,y*s).values[i] +
-		                              grid((x+1)*s,y*s).values[i] +
-		                              grid(x*s,(y-1)*s).values[i] +
-		                              grid(x*s,(y+1)*s).values[i])/4 +
-		                              2*rand()*w-w, 0.0, 1.0);
+		const size_t xpc = ((x-1)*s+m.cols()) % m.cols();
+		const size_t ypc = ((y-1)*s+m.rows()) % m.rows();
+		const size_t xnc = ((x+1)*s) % m.cols();
+		const size_t ync = ((y+1)*s) % m.rows();
+		m(y*s,x*s) = std::clamp<double>((m(y*s,xpc) + m(y*s,xnc) + m(ypc,x*s) + m(ync,x*s))/4
+		                               + 2*rand()*w-w, 0.0, 1.0);
 	};
-	// set each of the nodes' value on the initial coarse grid
-	for (int y=0; y<=ycells; ++y)
-		for (int x=0; x<=xcells; ++x)
-			for (int h=0; h<3; ++h)
-				grid(x*size,y*size).values[h] = rand();
-	// refine the grid
-	for (int cellsize=size; cellsize>1; ) {
-		// diamond step
-		for (int y=0; y<ycells; ++y)
-			for (int x=0; x<xcells; ++x)
-				for (int h=0; h<3; ++h)
-					diamond(x, y, cellsize, wiggle, h);
-		cellsize /= 2; ycells *= 2; xcells *= 2; wiggle *= damping;
-		// square step
-		for (int y=0; y<ycells; ++y) {
-			for (int h=0; h<3; ++h) {
-				if (y%2 == 0)
-					for (int x=1; x<xcells; x+=2)
-						square(x, y, cellsize, wiggle, h);
-				else
-					for (int x=0; x<xcells; x+=2)
-						square(x, y, cellsize, wiggle, h);
-			}
+
+	// set each of some nodes' value on an initial coarse grid
+	for (size_t y=0; y<=ycells; ++y)
+		for (size_t x=0; x<=xcells; ++x)
+			m(y*size,x*size) = rand();
+
+	for (size_t cellsize=size; cellsize>1; ) {
+		for (long y=0; y<ycells; ++y)
+			for (long x=0; x<xcells; ++x)
+				diamond(x, y, cellsize, wiggle);
+
+		cellsize /= 2;
+		ycells *= 2;
+		xcells *= 2;
+		wiggle *= damping;
+
+		for (long y=0; y<ycells; ++y) {
+			if (y%2 == 0)
+				for (long x=1; x<xcells; x+=2)
+					square(x, y, cellsize, wiggle);
+			else
+				for (long x=0; x<xcells; x+=2)
+					square(x, y, cellsize, wiggle);
 		}
 		wiggle *= damping;
 	}
-	return grid;
+	return m;
 }
-/* ================================================================= *\
+
+/* =================================================================
  * value noise
  * \par cellsize the width and height of each cell
  * \par xcells how many cells on the x-axis
@@ -141,38 +146,42 @@ diamond_square(int exp,int xcells,int ycells,double wiggle)
  *            default is $1$
  * \par f the interpolation function, default is $id$
  */
-Grid
-value_noise(int cellsize, int xcells, int ycells, int n_oct/*=1*/,
+math::Matrix<double>
+value_noise(size_t cellsize, size_t xcells, size_t ycells, size_t n_oct/*=1*/,
             const std::function<double(double)>& f/*=math::identity<double>*/)
 {
 	assert(n_oct < std::log2(cellsize));
 	std::mt19937 gen{std::random_device{}()};
-	auto rand = [&](){ return std::generate_canonical<float,16>(gen); };
-	Grid grid{xcells*cellsize, ycells*cellsize, true};
+	auto rand = [&](){ return std::generate_canonical<double,28>(gen); };
+	math::Matrix<double> noise{ycells*cellsize, xcells*cellsize};
+	math::Matrix<double> m{ycells*cellsize, xcells*cellsize};
+	noise = 0.0;
 
-	for (int k=0; k < n_oct; ++k) {
-		const int csize = (cellsize>>k);
-		for (int y=0; y < (ycells*(1<<k)); ++y)
-			for (int x=0; x < (xcells*(1<<k)); ++x)
-				grid(x*csize,y*csize).values[0] = rand();
+	for (size_t k=0; k < n_oct; ++k) {
+		const size_t csize = (cellsize>>k);
+		for (size_t i=0; i < (ycells*(1<<k)); ++i)
+			for (size_t j=0; j < (xcells*(1<<k)); ++j)
+				m(i*csize,j*csize) = rand();
 
-		for (int y=0; y < ycells*cellsize; ++y)
-			for (int x=0; x < xcells*cellsize; ++x) {
-				int xc = x / csize;
-				int yc = y / csize;
-				int u = x % csize;
-				int v = y % csize;
-				grid(x,y).values[0] += math::interpolate2d(
-												grid(xc*csize, yc*csize).grad[0],
-												grid(xc*csize, (yc+1)*csize).grad[0],
-												grid((xc+1)*csize, yc*csize).grad[0],
-												grid((xc+1)*csize, (yc+1)*csize).grad[0],
-												u,v,csize,f) / (1<<k);
+		for (size_t i=0; i < ycells*cellsize; ++i)
+			for (size_t j=0; j < xcells*cellsize; ++j) {
+				size_t ic = i / csize;
+				size_t jc = j / csize;
+				size_t u = i % csize;
+				size_t v = j % csize;
+				m(i,j) = math::interpolate2d(m(ic*csize, jc*csize),
+				                             m(ic*csize, (jc+1)*csize % m.cols()),
+				                             m((ic+1)*csize % m.rows(), jc*csize),
+				                             m((ic+1)*csize % m.rows(), (jc+1)*csize % m.cols()),
+				                             u, v, csize, f);
 			}
+		m /= (1 << k);
+		noise += m;
 	}
-	return grid;
+	return noise;
 }
-/* ================================================================= *\
+
+/* =================================================================
  * classic 2D perlin noise
  * \par cellsize the width and height of each cell
  * \par xcells how many cells on the x-axis
@@ -180,52 +189,52 @@ value_noise(int cellsize, int xcells, int ycells, int n_oct/*=1*/,
  * \par n_oct how many octaves of noise should be used,
  *            default is $1$
  */
-Grid
-gradient_noise(int cellsize, int xcells, int ycells, int n_oct/*=1*/)
+math::Matrix<double>
+gradient_noise(size_t cellsize,size_t xcells,size_t ycells,size_t n_oct/*=1*/)
 {
 	assert(n_oct < std::log2(cellsize));
 	std::mt19937 gen{std::random_device{}()};
-	auto rand = [&](){ return 2*std::generate_canonical<double,16>(gen)-1; };
+	auto rand = [&](){ return 2*std::generate_canonical<double,28>(gen)-1; };
 
-	Grid grid{xcells*cellsize,ycells*cellsize};
-	for (int y=0; y<ycells*cellsize; ++y)
-		for (int x=0; x<xcells*cellsize; ++x)
-			grid(x,y).height = 0.5;
+	math::Matrix<double> noise{ycells*cellsize,xcells*cellsize};
+	math::Matrix<double> m{ycells*cellsize,xcells*cellsize};
+	math::Matrix<math::Vector<double,2>> grad{ycells*cellsize,xcells*cellsize};
+	noise = 0.0;
 
 	math::Vector<double,2> uv00, uv01, uv10, uv11;
-	for (int k=0; k<n_oct; ++k) {
-		const int csize = cellsize >> k;
+	for (size_t k=0; k < n_oct; ++k) {
+		const size_t csize = cellsize >> k;
 
-		/* generate (new) random gradients for each cell */
-		for (int y=0; y<(ycells*1<<k); ++y)
-			for (int x=0; x<(xcells*1<<k); ++x) {
-				grid(x*csize,y*csize).grad[0] = rand();
-				grid(x*csize,y*csize).grad[1] = rand();
-				math::normalize<double,2>(grid(x*csize,y*csize).grad);
+		for (size_t i=0; i < (ycells*(1<<k)); ++i)
+			for (size_t j=0; j < (xcells*(1<<k)); ++j) {
+				grad(i*csize,j*csize)[0] = rand();
+				grad(i*csize,j*csize)[1] = rand();
+				math::normalize(grad(i*csize,j*csize));
 			}
 
-		for (int y=0; y < ycells*cellsize; ++y)
-			for (int x=0; x < xcells*cellsize; ++x) {
-				int xc = x / csize;
-				int yc = y / csize;
-				int u = x % csize;
-				int v = y % csize;
-				uv00[0]=1.0*u/csize  , uv00[1]=1.0*v/csize;
-				uv01[0]=1.0*u/csize  , uv01[1]=1.0*v/csize-1;
-				uv10[0]=1.0*u/csize-1, uv10[1]=1.0*v/csize;
-				uv11[0]=1.0*u/csize-1, uv11[1]=1.0*v/csize-1;
-				grid(x,y).values[0] += math::interpolate2d(
-							math::dot<double,2>(grid(xc*csize,yc*csize).grad,uv00),
-							math::dot<double,2>(grid(xc*csize,(yc+1)*csize).grad,uv01),
-							math::dot<double,2>(grid((xc+1)*csize,yc*csize).grad,uv10),
-							math::dot<double,2>(grid((xc+1)*csize,(yc+1)*csize).grad,uv11),
-							 u, v, csize, [](double t)-> double {return t*t*(-2*t+3);})
-							 / (sqrt(2.0)*(1<<k));
+		for (size_t i=0; i < ycells*cellsize; ++i)
+			for (size_t j=0; j < xcells*cellsize; ++j) {
+				size_t ic = i / csize;
+				size_t jc = j / csize;
+				double u = i % csize;
+				double v = j % csize;
+				uv00[0]=u/csize    ; uv00[1]=v/csize;
+				uv01[0]=u/csize    ; uv01[1]=v/csize-1.0;
+				uv10[0]=u/csize-1.0; uv10[1]=v/csize;
+				uv11[0]=u/csize-1.0; uv11[1]=v/csize-1.0;
+				m(i,j) = math::interpolate2d(math::dot(grad(ic*csize,jc*csize),uv00),
+				                             math::dot(grad(ic*csize,(jc+1)*csize % m.cols()),uv01),
+				                             math::dot(grad((ic+1)*csize % m.rows(),jc*csize),uv10),
+				                             math::dot(grad((ic+1)*csize % m.rows(),(jc+1)*csize % m.cols()),uv11),
+				                             u, v, csize, math::cubic_interpolant<double>) / sqrt(2.0);
 			}
+		m /= 1 << k;
+		noise += m;
 	}
-	return grid;
+	return noise;
 }
-/* ================================================================= *\
+
+/* =================================================================
  * Agent based landscape generation based on:
  * Doran, J., Parberry, I.: Controlled procedural terrain generation
  * using software agents. IEEE Transactions on Computational Intelli-
@@ -233,60 +242,60 @@ gradient_noise(int cellsize, int xcells, int ycells, int n_oct/*=1*/)
  * TODO
  */
 Grid
-doran_parberry(int width,int height)
+doran_parberry(size_t width,size_t height)
 {
-	return Grid{width,height};
+	math::Matrix<double> heightfield{height,width};
+	math::Matrix<double> temperature{height,width};
+	math::Matrix<double> humidity{height,width};
+	return Grid{width,height,heightfield,temperature,humidity};
 }
-/* ================================================================= *\
- * evaluates the biome type of each tile of a grid
- */
+
 void
-classify_grid(Grid& grid)
+Grid::classify()
 {
-	for (int y=0; y<grid.height(); ++y) {
-		for (int x=0; x<grid.width(); ++x) {
-			Tile& t = grid(x, y);
-			if (t.height < 0.1)
-				t.type = BiomeType::Deep_Ocean;
-			else if (t.height < 0.3)
-				t.type = BiomeType::Ocean;
-			else if (t.height < 0.4) {
-				t.type = BiomeType::Shallow_Ocean;
-			} else if (t.height < 0.95) {
-				if (t.moisture <= 0.1) {
-					if (t.temperature < .12)
-						t.type = BiomeType::Nival_Desert;
-					else if (t.temperature <= 0.8)
-						t.type = BiomeType::Temperate_Desert;
+	for (size_t i=0; i < height(); ++i) {
+		for (size_t j=0; j < width(); ++j) {
+			if (m_heightmap(i,j) < 0.1)
+				m_type(i,j) = BiomeType::Deep_Ocean;
+			else if (m_heightmap(i,j) < 0.3)
+				m_type(i,j) = BiomeType::Ocean;
+			else if (m_heightmap(i,j) < 0.4) {
+				m_type(i,j) = BiomeType::Shallow_Ocean;
+			} else if (m_heightmap(i,j) < 0.95) {
+				if (m_humidity(i,j) <= 0.1) {
+					if (m_temperature(i,j) < .12)
+						m_type(i,j) = BiomeType::Nival_Desert;
+					else if (m_temperature(i,j) <= 0.8)
+						m_type(i,j) = BiomeType::Temperate_Desert;
 					else
-						t.type = BiomeType::Tropical_Desert;
-				} else if (t.moisture <= 0.4) {
-					if (t.temperature < .12)
-						t.type = BiomeType::Nival_Shrubland;
-					else if (t.temperature <= 0.8)
-						t.type = BiomeType::Temperate_Shrubland;
+						m_type(i,j) = BiomeType::Tropical_Desert;
+				} else if (m_humidity(i,j) <= 0.4) {
+					if (m_temperature(i,j) < .12)
+						m_type(i,j) = BiomeType::Nival_Shrubland;
+					else if (m_temperature(i,j) <= 0.8)
+						m_type(i,j) = BiomeType::Temperate_Shrubland;
 					else
-						t.type = BiomeType::Tropical_Shrubland;
-				} else if (t.moisture <= 0.7) {
-					if (t.temperature < .12)
-						t.type = BiomeType::Nival_Shrubland;
-					else if (t.temperature <= 0.8)
-						t.type = BiomeType::Temperate_Forest;
+						m_type(i,j) = BiomeType::Tropical_Shrubland;
+				} else if (m_humidity(i,j) <= 0.7) {
+					if (m_temperature(i,j) < .12)
+						m_type(i,j) = BiomeType::Nival_Shrubland;
+					else if (m_temperature(i,j) <= 0.8)
+						m_type(i,j) = BiomeType::Temperate_Forest;
 					else
-						t.type = BiomeType::Tropical_Forest;
+						m_type(i,j) = BiomeType::Tropical_Forest;
 				} else {
-					if (t.temperature < .12)
-						t.type = BiomeType::Nival_Forest;
-					else if (t.temperature <= 0.8)
-						t.type = BiomeType::Temperate_Swamp;
+					if (m_temperature(i,j) < .12)
+						m_type(i,j) = BiomeType::Nival_Forest;
+					else if (m_temperature(i,j) <= 0.8)
+						m_type(i,j) = BiomeType::Temperate_Swamp;
 					else
-						t.type = BiomeType::Tropical_Swamp;
+						m_type(i,j) = BiomeType::Tropical_Swamp;
 				}
 			} else {
-				if (t.moisture >= 0.8)
-					t.type = BiomeType::Glacier;
+				if (m_humidity(i,j) >= 0.8)
+					m_type(i,j) = BiomeType::Glacier;
 				else
-					t.type = BiomeType::Mountain;
+					m_type(i,j) = BiomeType::Mountain;
 			}
 		}
 	}

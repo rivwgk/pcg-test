@@ -6,32 +6,25 @@
 
 namespace math {
 
-template<typename T,size_t N>
+template<typename K,size_t N>
 struct Vector {
-	static_assert(std::is_arithmetic<T>());
-	/* -------------------------------------------------------------- */
+	static_assert(std::is_arithmetic<K>());
+
 	Vector() {}
-	/* -------------------------------------------------------------- */
-	Vector(const T v)
+	Vector(const K v)
 	{
 		for (size_t i=0; i<N; ++i)
 			data[i]=v;
 	}
-	/* -------------------------------------------------------------- */
-	Vector(const T v[N])
-	{
-		for (size_t i=0; i<N; ++i)
-			data[i]=v[i];
-	}
-	/* -------------------------------------------------------------- */
-	Vector(const Vector<T,N>& other)
+
+	Vector(const Vector<K,N>& other)
 	{
 		for (size_t i=0; i<N; ++i)
 			data[i]=other[i];
 	}
-	/* -------------------------------------------------------------- */
-	Vector<T,N>&
-	operator=(const Vector<T,N>& other)
+
+	Vector<K,N>&
+	operator=(const Vector<K,N>& other)
 	{
 		if (&other == this)
 			return *this;
@@ -40,145 +33,145 @@ struct Vector {
 		return *this;
 	}
 	/* ============================================================== */
-	T&
+	K&
 	operator[](const size_t i)
 	{
 		return data[i];
 	}
-	/* -------------------------------------------------------------- */
-	const T&
+	const K&
 	operator[](const size_t i)
 	const {
 		return data[i];
 	}
 	/* ============================================================== */
-	Vector<T,N>
-	operator+(const Vector<T,N>& other)
+	Vector<K,N>
+	operator+(const Vector<K,N>& other)
 	const {
-		Vector<T,N> d;
+		Vector<K,N> d;
 		for (size_t i=0; i<N; ++i)
 			d[i] = data[i]+other[i];
 		return d;
 	}
-	/* -------------------------------------------------------------- */
-	Vector<T,N>
-	operator+=(const Vector<T,N>& other)
+
+	Vector<K,N>
+	operator+=(const Vector<K,N>& other)
 	{
 		for (size_t i=0; i<N; ++i)
 			data[i] += other[i];
 		return *this;
 	}
 	/* ============================================================== */
-	Vector<T,N>
+	Vector<K,N>
 	operator-()
 	const {
-		Vector<T,N> d;
+		Vector<K,N> d;
 		for (size_t i=0; i<N; ++i)
 			d[i] = -data[i];
 		return d;
 	}
-	/* -------------------------------------------------------------- */
-	Vector<T,N>
-	operator-(const Vector<T,N>& other)
+
+	Vector<K,N>
+	operator-(const Vector<K,N>& other)
 	const {
-		Vector<T,N> d;
+		Vector<K,N> d;
 		for (size_t i=0; i<N; ++i)
 			d[i] = data[i]-other[i];
 		return d;
 	}
-	/* -------------------------------------------------------------- */
-	Vector<T,N>
-	operator-=(const Vector<T,N>& other)
+
+	Vector<K,N>
+	operator-=(const Vector<K,N>& other)
 	{
 		for (size_t i=0; i<N; ++i)
 			data[i] -= other[i];
 		return *this;
 	}
 	/* ============================================================== */
-	Vector<T,N>
-	operator*(const Vector<T,N>& other)
+	Vector<K,N>
+	operator*(const Vector<K,N>& other)
 	const {
-		Vector<T,N> d;
+		Vector<K,N> d;
 		for (size_t i=0; i<N; ++i)
 			d[i] = data[i]*other[i];
 		return d;
 	}
 	/* -------------------------------------------------------------- */
-	Vector<T,N>
-	operator*=(const Vector<T,N>& other)
+	Vector<K,N>
+	operator*=(const Vector<K,N>& other)
 	{
 		for (size_t i=0; i<N; ++i)
 			data[i] *= other[i];
 		return *this;
 	}
 	/* ============================================================== */
-	Vector<T,N>
-	operator/(const Vector<T,N>& other)
+	Vector<K,N>
+	operator/(const Vector<K,N>& other)
 	const {
-		Vector<T,N> d;
+		Vector<K,N> d;
 		for (size_t i=0; i<N; ++i)
 			d[i] = data[i]/other[i];
 		return d;
 	}
 	/* -------------------------------------------------------------- */
-	Vector<T,N>
-	operator/=(const Vector<T,N>& other)
+	Vector<K,N>
+	operator/=(const Vector<K,N>& other)
 	{
 		for (size_t i=0; i<N; ++i)
 			data[i] /= other[i];
 		return *this;
 	}
 private:
-	T data[N];
+	K data[N];
 };
 /* ================================================================= */
-template<typename T, size_t N> T
-dot(const Vector<T,N>& lhs, const Vector<T,N>& rhs)
+template<typename K, size_t N> K
+dot(const Vector<K,N>& lhs, const Vector<K,N>& rhs)
 {
-	T d{};
+	K d{};
 	for (size_t i=0; i<N; ++i)
 		d += lhs[i]*rhs[i];
 	return d;
 }
-template<typename T, size_t N> T
-dot(const T lhs[N], const T rhs[N])
+template<typename K, size_t N> K
+dot(const K lhs[N], const K rhs[N])
 {
-	T d{};
+	K d{};
 	for (size_t i=0; i<N; ++i)
 		d += lhs[i]*rhs[i];
 	return d;
 }
 /* ----------------------------------------------------------------- */
-template<typename T, size_t N> T
-norm2(const Vector<T,N>& v)
+template<typename K, size_t N> K
+norm2(const Vector<K,N>& v)
 {
-	T n{};
+	K n{};
 	for (size_t i=0; i<N; ++i)
 		n += v[i]*v[i];
 	return std::sqrt(n);
 }
-template<typename T, size_t N> T
-norm2(const T v[N])
+template<typename K, size_t N> K
+norm2(const K v[N])
 {
-	T n{};
+	K n{};
 	for (size_t i=0; i<N; ++i)
 		n += v[i]*v[i];
 	return std::sqrt(n);
 }
 /* ----------------------------------------------------------------- */
-template<typename T, size_t N> void
-normalize(T v[N])
+template<typename K, size_t N> void
+normalize(K v[N])
 {
-	T n=norm2<T,N>(v);
+	K n=norm2<K,N>(v);
 	for (size_t i=0; i<N; ++i)
 		v[i] /= n;
 }
 
-template<typename T, size_t N> void
-normalize(Vector<T,N>& v)
+template<typename K, size_t N> void
+normalize(Vector<K,N>& v)
 {
-   T n=norm2(v);
-   for (size_t i=0; i<N; ++i)
-      v[i] /= n;
+	K n=norm2(v);
+	for (size_t i=0; i<N; ++i)
+		v[i] /= n;
 }
+
 } // namespace math
