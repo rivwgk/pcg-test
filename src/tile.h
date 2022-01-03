@@ -1,6 +1,6 @@
 #pragma once
 
-#include "math/vector.hpp"
+#include "math/utils.hpp"
 #include "colourscales.h"
 
 enum class BiomeType: unsigned {

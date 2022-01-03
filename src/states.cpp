@@ -30,20 +30,20 @@ Grid2DState::update(sf::RenderWindow& window, const sf::Event& e)
 	if (e.type == sf::Event::KeyPressed) {
 		switch (e.key.code) {
 		case sf::Keyboard::Key::F1:
-			min = math::min(grid-> heightmap());
-			max = math::max(grid-> heightmap());
+			min = grid-> heightmap().minCoeff();
+			max = grid-> heightmap().maxCoeff();
 			md.load_matrix<double>(grid-> heightmap(),
 			               [=](double x){ return greyscale(x, min, max); });
 			break;
 		case sf::Keyboard::Key::F2:
-			min = math::min(grid-> temperature());
-			max = math::max(grid-> temperature());
+			min = grid-> temperature().minCoeff();
+			max = grid-> temperature().maxCoeff();
 			md.load_matrix<double>(grid-> temperature(),
 			               [=](double x){ return temperature(x, min, max); });
 			break;
 		case sf::Keyboard::Key::F3:
-			min = math::min(grid-> humidity());
-			max = math::max(grid-> humidity());
+			min = grid-> humidity().minCoeff();
+			max = grid-> humidity().maxCoeff();
 			md.load_matrix<double>(grid-> humidity(),
 			               [=](double x){ return greyscale(x, min, max); });
 			break;

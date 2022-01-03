@@ -1,16 +1,23 @@
 project(
   'pcg-test',
   'cpp',
-  version : '0.0.0',
+  version: '0.0.0',
   default_options: [
-    'cpp_std=c++2a'
+    'cpp_std=c++20'
   ],
 )
 
-lsfml_window = dependency('sfml-window')
-lsfml_system = dependency('sfml-system')
-lsfml_graphics = dependency('sfml-graphics')
-deps = [lsfml_window, lsfml_system, lsfml_graphics]
+exe_deps = []
+exe_deps += dependency(
+  'sfml-all',
+  fallback: [
+    'sfml',
+    'sfml_dep',
+  ],
+)
+exe_deps += dependency(
+  'eigen3',
+)
 
 sources = []
 subdir('src')
@@ -18,5 +25,5 @@ subdir('src')
 executable(
   meson.project_name(),
   sources: sources,
-  dependencies: deps,
+  dependencies: exe_deps,
 )

@@ -19,12 +19,12 @@ public:
 
 	template<typename K>
 	void
-	load_matrix(const math::Matrix<K>& mat,
+	load_matrix(const Field2D<K>& mat,
 	            const std::function<sf::Color(const K&)> conv)
 	{
 		img.create(mat.cols(), mat.rows());
-		for (size_t y=0; y < mat.rows(); ++y)
-			for (size_t x=0; x < mat.cols(); ++x)
+		for (long y = 0; y < mat.rows(); ++y)
+			for (long x = 0; x < mat.cols(); ++x)
 				img.setPixel(x, y, conv(mat(y,x)));
 		tex.create(mat.cols(), mat.rows());
 		tex.update(img);

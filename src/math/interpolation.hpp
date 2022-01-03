@@ -2,6 +2,7 @@
 
 #include <type_traits>
 #include <functional>
+#include "utils.hpp"
 
 namespace math {
 
@@ -22,7 +23,7 @@ cubic_interpolant(const K x)
 template<typename K>
 K
 interpolate(K x0, K x1, double t, double size=1.0,
-            const std::function<double(double)>&f=identity<double>)
+            const R2RFunction& f = identity<double>)
 {  static_assert(std::is_arithmetic<K>());
 	return (1-f(t/size))*x0+f(t/size)*x1;
 }
@@ -30,7 +31,7 @@ interpolate(K x0, K x1, double t, double size=1.0,
 template<typename K>
 K
 interpolate2d(K x00, K x01, K x10, K x11, double u, double v, double size=1.0,
-              const std::function<double(double)>&f=identity<double>)
+              const R2RFunction& f = identity<double>)
 {  static_assert(std::is_arithmetic<K>());
 	return (1-f(u/size))*(1-f(v/size))*x00+(1-f(u/size))*   f(v/size) *x01
 			+   f(u/size) *(1-f(v/size))*x10+   f(u/size) *   f(v/size) *x11;
@@ -40,7 +41,7 @@ template<typename K>
 K
 interpolate3d(K x000, K x001, K x010, K x011, K x100, K x101, K x110, K x111,
               double u, double v, double w, double size=1.0,
-              const std::function<double(double)>&f=identity<double>)
+              const R2RFunction& f = identity<double>)
 {
 	return (1-f(u/size))*(1-f(v/size))*(1-f(w/size))*x000
 			+(1-f(u/size))*(1-f(v/size))*   f(w/size) *x001
